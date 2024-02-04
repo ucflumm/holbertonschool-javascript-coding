@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const path = require('path');
 
 const app = express();
 
@@ -8,7 +9,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/students', async (req, res) => {
-  const databasePath = process.argv[2];
+  const databasePath = path.join(__dirname, process.argv[2] || 'database.csv');
   try {
     const data = await fs.promises.readFile(databasePath, 'utf8');
     let lines = data.split('\n');
@@ -21,7 +22,7 @@ app.get('/students', async (req, res) => {
       }
       fields[student[3]].push(student[0]);
     }
-    const count = `Number of students: ${lines.length}`;
+    let count = `Number of students: ${lines.length}`;
     Object.keys(fields).forEach((field) => {
       if (field) {
         const list = fields[field];
@@ -29,8 +30,6 @@ app.get('/students', async (req, res) => {
       }
     });
     res.send(count);
-    res.send(list);
-    res.end();
   } catch (error) {
     res.send('Cannot load the database');
   }
@@ -38,4 +37,4 @@ app.get('/students', async (req, res) => {
 
 app.listen(1245, () => {
   console.log('Listening on port 1245');
-});  
+});
