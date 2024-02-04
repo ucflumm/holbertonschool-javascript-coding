@@ -1,40 +1,57 @@
+// Import the necessary modules
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
+const fs = require('fs').promises;
 
+// Initialize an Express application
 const app = express();
 
+// Define a route handler for the root route ('/')
 app.get('/', (req, res) => {
-  res.send('Hello Holberton School!');
+  res.type('text/plain'); // Set the Content-Type of the response to text/plain
+  res.send('Hello Holberton School!'); // Send a plain text response to the client
 });
 
+// Define a route handler for the '/students' route
 app.get('/students', async (req, res) => {
-  const databasePath = path.join(__dirname, process.argv[2] || 'database.csv');
+  const databasePath = process.argv[2]; // Get the database file path from command line arguments
   try {
-    const data = await fs.promises.readFile(databasePath, 'utf8');
-    let lines = data.split('\n');
-    lines.shift();
-    const fields = {};
-    for (const line of lines) {
-      const student = line.split(',');
-      if (!fields[student[3]]) {
-        fields[student[3]] = [];
+    // Read the database file asynchronously
+    const data = await fs.readFile(databasePath, 'utf8');
+    // Process the file data
+    const lines = data.split('\n').slice(1).filter((line) => line.trim() !== ''); // Remove the header and empty lines
+    let totalStudents = 0;
+    const studentsByField = {};
+
+    // Count students and group them by field
+    lines.forEach((line) => {
+      const [firstname, , , field] = line.split(',');
+      if (!studentsByField[field]) { // Initialize the field if it's not already present
+        studentsByField[field] = { count: 0, names: [] };
       }
-      fields[student[3]].push(student[0]);
-    }
-    let count = `Number of students: ${lines.length}`;
-    Object.keys(fields).forEach((field) => {
-      if (field) {
-        const list = fields[field];
-        count += `\nNumber of students in ${field}: ${list.length}. List: ${list.join(', ')}`;
-      }
+      studentsByField[field].count += 1; // Increment the count for the field
+      studentsByField[field].names.push(firstname); // Add the student's name to the field
+      totalStudents += 1; // Increment the total number of students
     });
-    res.send(count);
-  } catch (error) {
-    res.send('Cannot load the database');
+
+    // Construct the response text
+    let responseText = `This is the list of our students\nNumber of students: ${totalStudents}\n`;
+    Object.entries(studentsByField).forEach(([field, students]) => {
+      responseText += `Number of students in ${field}: ${students.count}. List: ${students.names.join(', ')}\n`;
+    });
+
+    // Send the constructed response to the client
+    res.type('text/plain');
+    res.send(responseText);
+  } catch (error) { // Handle errors (e.g., file not found)
+    res.type('text/plain');
+    res.status(500).send('This is the list of our students\nCannot load the database');
   }
 });
 
+// Start the Express server on port 1245
 app.listen(1245, () => {
-  console.log('Listening on port 1245');
+  console.log('Server is running on port 1245');
 });
+
+// Export the Express app for potential further use, such as testing
+module.exports = app;
